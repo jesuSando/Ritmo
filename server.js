@@ -4,18 +4,25 @@ require('dotenv').config();
 
 const sequelize = require('./src/config/db');
 const associations = require('./src/models/associations');
+const routes = require('./src/routes/index');
 
 const app = express();
 
 app.use(cors());
 app.use(express.json());
 
+app.use('/api', routes);
 app.get('/api/health', (req, res) => {
     res.json({
         status: 'OK',
-        message: 'RitmoApp Backend funcionando',
+        message: 'Backend funcionando',
         timestamp: new Date().toISOString()
     });
+});
+
+// Manejo de errores 404
+app.use((req, res) => {
+    res.status(404).json({ error: 'Ruta no encontrada' });
 });
 
 const PORT = process.env.PORT;
@@ -25,7 +32,6 @@ async function startServer() {
         await sequelize.authenticate();
         console.log('Conexión a DB establecida');
 
-        // en desarrollo sincronizar modelos
         if (process.env.NODE_ENV === 'development') {
             await sequelize.sync({ force: false });
             console.log('Modelos sincronizados');
