@@ -44,4 +44,12 @@ const Routine = sequelize.define('Routine', {
     timestamps: true
 });
 
+Routine.associate = function (models) {
+    Routine.belongsTo(models.User, { foreignKey: 'userId' });
+    Routine.hasMany(models.Task, {
+        foreignKey: 'originRoutineId',
+        as: 'generatedTasks'
+    });
+};
+
 module.exports = Routine;

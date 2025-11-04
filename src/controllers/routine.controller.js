@@ -1,4 +1,4 @@
-const { Routine, Task, sequelize } = require('../models/associations');
+const { Routine, Task, sequelize } = require('../models');
 const { Op } = require('sequelize');
 
 const routineController = {

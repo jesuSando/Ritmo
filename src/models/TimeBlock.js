@@ -29,4 +29,8 @@ const TimeBlock = sequelize.define('TimeBlock', {
     timestamps: true
 });
 
+TimeBlock.associate = function (models) {
+    TimeBlock.belongsTo(models.User, { foreignKey: 'userId' });
+};
+
 module.exports = TimeBlock;

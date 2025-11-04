@@ -44,4 +44,22 @@ const Task = sequelize.define('Task', {
     timestamps: true
 });
 
+Task.associate = function (models) {
+    Task.belongsTo(models.User, { foreignKey: 'userId' });
+    Task.belongsTo(models.Routine, {
+        foreignKey: 'originRoutineId',
+        as: 'originRoutine'
+    });
+    Task.belongsToMany(models.Task, {
+        through: models.TaskDependency,
+        as: 'dependencies',
+        foreignKey: 'taskId'
+    });
+    Task.belongsToMany(models.Task, {
+        through: models.TaskDependency,
+        as: 'dependentTasks',
+        foreignKey: 'dependsOnTaskId'
+    });
+};
+
 module.exports = Task;

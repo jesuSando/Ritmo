@@ -1,4 +1,4 @@
-const { Task, TaskDependency, Routine, sequelize } = require('../models/associations');
+const { Task, TaskDependency, Routine, sequelize } = require('../models');
 const { Op } = require('sequelize');
 
 const taskController = {
