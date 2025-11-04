@@ -6,8 +6,13 @@ ritmo-app-backend/
 │   ├── routes/
 │   ├── middleware/
 │   ├── config/
-│   ├── utils/
-│   └── app.js
+│   └── utils/
 ├── package.json
 └── server.js
 ```
+
+- servidor
+- conexion a bd
+- modelos
+- auth controller y middleware
+controllers
