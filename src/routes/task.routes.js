@@ -13,5 +13,6 @@ router.get('/:id', taskController.getTaskById);
 router.put('/:id', taskController.updateTask);
 router.delete('/:id', taskController.deleteTask);
 router.patch('/:id/discard', taskController.discardTask);
+router.post('/:id/dependencies', taskController.addDependency);
 
 module.exports = router;

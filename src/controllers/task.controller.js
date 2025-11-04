@@ -2,7 +2,6 @@ const { Task, TaskDependency, Routine, sequelize } = require('../models');
 const { Op } = require('sequelize');
 
 const taskController = {
-    // Crear nueva tarea
     createTask: async (req, res) => {
         const transaction = await sequelize.transaction();
         try {
@@ -16,7 +15,6 @@ const taskController = {
                 dependencies = []
             } = req.body;
 
-            // Validar solapamiento si no permite overlap
             if (!allowOverlap) {
                 const overlappingTask = await Task.findOne({
                     where: {
@@ -49,7 +47,6 @@ const taskController = {
                 }
             }
 
-            // Crear tarea
             const task = await Task.create({
                 userId: req.user.id,
                 title,
@@ -61,18 +58,41 @@ const taskController = {
                 status: 'pending'
             }, { transaction });
 
-            // Manejar dependencias si existen
-            if (dependencies.length > 0) {
-                const dependencyRecords = dependencies.map(depId => ({
-                    taskId: task.id,
-                    dependsOnTaskId: depId
-                }));
-                await TaskDependency.bulkCreate(dependencyRecords, { transaction });
+            if (dependencies && dependencies.length > 0) {
+                const existingDependencies = await Task.findAll({
+                    where: {
+                        id: dependencies,
+                        userId: req.user.id
+                    },
+                    transaction
+                });
+
+                if (existingDependencies.length !== dependencies.length) {
+                    await transaction.rollback();
+                    return res.status(400).json({
+                        error: 'Algunas tareas dependientes no existen o no te pertenecen',
+                        invalidDependencies: dependencies.filter(depId =>
+                            !existingDependencies.find(task => task.id === depId)
+                        )
+                    });
+                }
+
+                const validDependencies = dependencies.filter(depId =>
+                    depId !== task.id // Evitar dependencia consigo misma
+                );
+
+                if (validDependencies.length > 0) {
+                    const dependencyRecords = validDependencies.map(depId => ({
+                        taskId: task.id,
+                        dependsOnTaskId: depId
+                    }));
+
+                    await TaskDependency.bulkCreate(dependencyRecords, { transaction });
+                }
             }
 
             await transaction.commit();
 
-            // Cargar tarea con dependencias
             const taskWithDeps = await Task.findByPk(task.id, {
                 include: [
                     {
@@ -89,23 +109,21 @@ const taskController = {
             });
         } catch (error) {
             await transaction.rollback();
+            console.error('Error creando tarea:', error);
             res.status(500).json({ error: 'Error creando tarea: ' + error.message });
         }
     },
 
-    // Obtener todas las tareas del usuario
     getUserTasks: async (req, res) => {
         try {
             const { status, startDate, endDate } = req.query;
 
             const whereClause = { userId: req.user.id };
 
-            // Filtrar por status si se proporciona
             if (status) {
                 whereClause.status = status;
             }
 
-            // Filtrar por rango de fechas si se proporciona
             if (startDate && endDate) {
                 whereClause.startTime = {
                     [Op.between]: [new Date(startDate), new Date(endDate)]
@@ -135,7 +153,6 @@ const taskController = {
         }
     },
 
-    // Obtener tarea por ID
     getTaskById: async (req, res) => {
         try {
             const task = await Task.findOne({
@@ -167,7 +184,6 @@ const taskController = {
         }
     },
 
-    // Actualizar tarea
     updateTask: async (req, res) => {
         const transaction = await sequelize.transaction();
         try {
@@ -183,22 +199,17 @@ const taskController = {
                 return res.status(404).json({ error: 'Tarea no encontrada' });
             }
 
-            // Validar que no se complete una tarea con dependencias pendientes
             if (req.body.status === 'completed') {
-                const pendingDependencies = await TaskDependency.findAll({
-                    where: { taskId: task.id },
-                    include: [{
-                        model: Task,
-                        as: 'dependsOnTask',
-                        where: { status: { [Op.ne]: 'completed' } }
-                    }]
-                }, { transaction });
+                const pendingDependencies = await task.getDependencies({
+                    where: { status: { [Op.ne]: 'completed' } },
+                    transaction
+                });
 
                 if (pendingDependencies.length > 0) {
                     await transaction.rollback();
                     return res.status(400).json({
                         error: 'No se puede completar la tarea. Hay dependencias pendientes.',
-                        pendingDependencies
+                        pendingDependencies: pendingDependencies.map(t => ({ id: t.id, title: t.title }))
                     });
                 }
             }
@@ -216,7 +227,6 @@ const taskController = {
         }
     },
 
-    // Eliminar tarea
     deleteTask: async (req, res) => {
         const transaction = await sequelize.transaction();
         try {
@@ -232,7 +242,6 @@ const taskController = {
                 return res.status(404).json({ error: 'Tarea no encontrada' });
             }
 
-            // Eliminar dependencias relacionadas
             await TaskDependency.destroy({
                 where: {
                     [Op.or]: [
@@ -253,7 +262,6 @@ const taskController = {
         }
     },
 
-    // Descartar tarea
     discardTask: async (req, res) => {
         try {
             const task = await Task.findOne({
@@ -278,7 +286,6 @@ const taskController = {
         }
     },
 
-    // Obtener próximas tareas (para futuro sistema de notificaciones)
     getUpcomingTasks: async (req, res) => {
         try {
             const { range = 60 } = req.query; // minutos por defecto
@@ -299,6 +306,57 @@ const taskController = {
             res.json({ tasks });
         } catch (error) {
             res.status(500).json({ error: 'Error obteniendo próximas tareas: ' + error.message });
+        }
+    },
+
+    addDependency: async (req, res) => {
+        const transaction = await sequelize.transaction();
+        try {
+            const { dependsOnTaskId } = req.body;
+            const taskId = req.params.id;
+
+            const [task, dependsOnTask] = await Promise.all([
+                Task.findOne({ where: { id: taskId, userId: req.user.id } }),
+                Task.findOne({ where: { id: dependsOnTaskId, userId: req.user.id } })
+            ]);
+
+            if (!task || !dependsOnTask) {
+                await transaction.rollback();
+                return res.status(404).json({ error: 'Tarea no encontrada' });
+            }
+
+            if (taskId === dependsOnTaskId) {
+                await transaction.rollback();
+                return res.status(400).json({ error: 'Una tarea no puede depender de sí misma' });
+            }
+
+            const existingDependency = await TaskDependency.findOne({
+                where: { taskId, dependsOnTaskId },
+                transaction
+            });
+
+            if (existingDependency) {
+                await transaction.rollback();
+                return res.status(400).json({ error: 'La dependencia ya existe' });
+            }
+
+            await TaskDependency.create({
+                taskId,
+                dependsOnTaskId
+            }, { transaction });
+
+            await transaction.commit();
+
+            res.json({
+                message: 'Dependencia agregada exitosamente',
+                dependency: {
+                    taskId,
+                    dependsOnTaskId
+                }
+            });
+        } catch (error) {
+            await transaction.rollback();
+            res.status(500).json({ error: 'Error agregando dependencia: ' + error.message });
         }
     }
 };
