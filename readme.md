@@ -11,8 +11,5 @@ ritmo-app-backend/
 └── server.js
 ```
 
-- servidor
-- conexion a bd
-- modelos
-- auth controller y middleware
-controllers
+- no traer todas las tareas, sino que traer por parametros.
+- 
