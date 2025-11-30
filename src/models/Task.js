@@ -21,11 +21,27 @@ const Task = sequelize.define('Task', {
     },
     startTime: {
         type: DataTypes.DATE,
-        allowNull: false
+        allowNull: false,
+        validate: {
+            isDate: true,
+            isAfterCurrent(value) {
+                if (new Date(value) < new Date()) {
+                    throw new Error('startTime no puede ser en el pasado');
+                }
+            }
+        }
     },
     endTime: {
         type: DataTypes.DATE,
-        allowNull: false
+        allowNull: false,
+        validate: {
+            isDate: true,
+            isAfterStart(value) {
+                if (new Date(value) <= new Date(this.startTime)) {
+                    throw new Error('endTime debe ser después de startTime');
+                }
+            }
+        }
     },
     allowOverlap: {
         type: DataTypes.BOOLEAN,
@@ -41,7 +57,24 @@ const Task = sequelize.define('Task', {
     }
 }, {
     tableName: 'tasks',
-    timestamps: true
+    timestamps: true,
+    hooks: {
+        beforeValidate: (task) => {
+            if (task.startTime && task.endTime) {
+                const start = new Date(task.startTime);
+                const end = new Date(task.endTime);
+
+                if (end <= start) {
+                    throw new Error('endTime debe ser posterior a startTime');
+                }
+
+                const duration = end - start;
+                if (duration < 60000) { // 60,000 ms = 1 minuto
+                    throw new Error('La duración mínima de la tarea debe ser 1 minuto');
+                }
+            }
+        }
+    }
 });
 
 Task.associate = function (models) {
