@@ -6,11 +6,11 @@
   "scripts": {
     "dev": "nodemon server.js",
     "start": "node server.js",
-    "create-test-user": "node scripts/createTestUser.js",
-    "db:sync": "node scripts/syncDatabase.js",
-    "db:sync:force": "node scripts/syncDatabase.js --force",
-    "db:sync:alter": "node scripts/syncDatabase.js --alter",
-    "db:sync:test": "node scripts/syncDatabase.js --create-test-data"
+    "create-user": "node src/scripts/createUser.js",
+    "db:sync": "node src/scripts/syncDatabase.js",
+    "db:sync:force": "node src/scripts/syncDatabase.js --force",
+    "db:sync:alter": "node src/scripts/syncDatabase.js --alter",
+    "db:sync:test": "node src/scripts/syncDatabase.js --create-test-data"
   },
   "dependencies": {
     "bcryptjs": "3.0.3",

@@ -1,5 +1,6 @@
-const sequelize = require('../src/config/db');
-const { User } = require('../src/models');
+const bcrypt = require('bcryptjs');
+const sequelize = require('../config/db');
+const { User } = require('../models');
 
 async function createTestUser() {
     try {
@@ -7,7 +8,7 @@ async function createTestUser() {
         console.log('Conectado a la base de datos');
 
         const existingUser = await User.findOne({ where: { email: 'test@example.com' } });
-        
+
         if (existingUser) {
             console.log('Usuario ya existe:');
             console.log(`   Email: ${existingUser.email}`);
@@ -17,14 +18,14 @@ async function createTestUser() {
         const testUser = await User.create({
             name: 'User Test',
             email: 'test@example.com',
-            password: '123456'
+            passwordHash: await bcrypt.hash('123456', 10)
         });
 
         console.log('Usuario creado exitosamente:');
         console.log(`   ID: ${testUser.id}`);
         console.log(`   Nombre: ${testUser.name}`);
         console.log(`   Email: ${testUser.email}`);
-        
+
     } catch (error) {
         console.error('Error creando usuario de prueba:', error.message);
         process.exit(1);
