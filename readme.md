@@ -12,4 +12,4 @@ ritmo-app-backend/
 ```
 
 - no traer todas las tareas, sino que traer por parametros.
-- 
+- manejar muchas peticiones en register

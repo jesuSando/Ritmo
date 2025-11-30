@@ -5,6 +5,7 @@ require('dotenv').config();
 const sequelize = require('./src/config/db');
 const associations = require('./src/models');
 const routes = require('./src/routes/index');
+const syncDatabase = require('./src/scripts/syncDatabase');
 
 const app = express();
 
@@ -20,7 +21,6 @@ app.get('/api/health', (req, res) => {
     });
 });
 
-// Manejo de errores 404
 app.use((req, res) => {
     res.status(404).json({ error: 'Ruta no encontrada' });
 });
@@ -33,7 +33,7 @@ async function startServer() {
         console.log('Conexión a DB establecida');
 
         if (process.env.NODE_ENV === 'development') {
-            await sequelize.sync({ force: false });
+            await sequelize.sync({ alter: true });
             console.log('Modelos sincronizados');
         }
 
