@@ -67,8 +67,8 @@ const Transaction = sequelize.define('Transaction', {
 });
 
 async function updateAccountBalance(transaction, options) {
-    const { Account } = require('./index');
-    const account = await Account.findByPk(transaction.accountId, { transaction: options?.transaction });
+    const { FinanceAccount  } = require('./index');
+    const account = await FinanceAccount .findByPk(transaction.accountId, { transaction: options?.transaction });
 
     if (!account) return;
 
@@ -89,8 +89,8 @@ async function updateAccountBalance(transaction, options) {
 }
 
 async function revertAccountBalance(transaction, options) {
-    const { Account } = require('./index');
-    const account = await Account.findByPk(transaction.accountId, { transaction: options?.transaction });
+    const { FinanceAccount  } = require('./index');
+    const account = await FinanceAccount .findByPk(transaction.accountId, { transaction: options?.transaction });
 
     if (!account || !transaction.isConfirmed) return;
 

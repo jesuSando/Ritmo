@@ -1,19 +1,27 @@
 const sequelize = require('../config/db');
 
-// Importar modelos
+// rutinas
 const User = require('./User');
 const Task = require('./Task');
 const Routine = require('./Routine');
 const TimeBlock = require('./TimeBlock');
 const TaskDependency = require('./TaskDependency');
 
-// Inicializar modelos
+// finanzas
+const FinanceAccount = require('./FinanceAccount');
+const Transaction = require('./Transaction');
+const Budget = require('./Budget');
+
+
 const models = {
     User: User,
     Task: Task,
     Routine: Routine,
     TimeBlock: TimeBlock,
-    TaskDependency: TaskDependency
+    TaskDependency: TaskDependency,
+    FinanceAccount: FinanceAccount,
+    Transaction: Transaction,
+    Budget: Budget,
 };
 
 // Configurar asociaciones
