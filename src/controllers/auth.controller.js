@@ -37,7 +37,6 @@ const authController = {
 
             res.status(201).json({
                 message: 'Usuario registrado exitosamente',
-                token,
                 user: { id: user.id, name: user.name, email: user.email }
             });
 
@@ -60,37 +59,76 @@ const authController = {
                 attributes: ['id', 'name', 'email', 'passwordHash']
             });
 
-            if (!user) {
-                return res.status(401).json({ error: 'Credenciales inválidas' });
-            }
+            if (!user) return res.status(401).json({ error: 'Credenciales inválidas' });
 
             const isValidPassword = await user.verifyPassword(password);
-            if (!isValidPassword) {
-                return res.status(401).json({ error: 'Credenciales inválidas' });
-            }
+            if (!isValidPassword) return res.status(401).json({ error: 'Credenciales inválidas' });
 
-            const token = jwt.sign(
-                {
-                    id: user.id,
-                    name: user.name,
-                    email: user.email
-                },
+            const accessToken = jwt.sign(
+                { id: user.id, name: user.name, email: user.email },
                 process.env.JWT_SECRET,
+                { expiresIn: '1h' }
+            );
+
+            const refreshToken = jwt.sign(
+                { id: user.id },
+                process.env.JWT_REFRESH_SECRET,
                 { expiresIn: '7d' }
             );
 
+            res.cookie("refreshToken", refreshToken, {
+                httpOnly: true,
+                secure: true,
+                sameSite: "none",
+                maxAge: 7 * 24 * 60 * 60 * 1000
+            });
+
             res.json({
                 message: 'Login exitoso',
-                token,
+                accessToken,
                 user: {
                     id: user.id,
                     name: user.name,
                     email: user.email
                 }
             });
+
         } catch (error) {
             console.error('Error en login:', error);
             res.status(500).json({ error: 'Error en el servidor: ' + error.message });
+        }
+    },
+
+    logout: (req, res) => {
+        res.clearCookie("token", {
+            httpOnly: true,
+            secure: true,
+            sameSite: "none"
+        });
+
+        res.json({ message: "Sesión cerrada" });
+    },
+
+    refresh: async (req, res) => {
+        const tokenFromCookie = req.cookies.refreshToken;
+        if (!tokenFromCookie) {
+            return res.status(401).json({ error: "No hay refresh token" });
+        }
+
+        try {
+            const data = jwt.verify(tokenFromCookie, process.env.JWT_REFRESH_SECRET);
+
+            const newAccessToken = jwt.sign(
+                { id: data.id },
+                process.env.JWT_SECRET,
+                { expiresIn: "1h" }
+            );
+
+            res.json({ accessToken: newAccessToken });
+
+        } catch (err) {
+            console.error("Error refrescando token:", err.message);
+            return res.status(401).json({ error: "Refresh token inválido o expirado" });
         }
     },
 
