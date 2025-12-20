@@ -20,7 +20,6 @@ const authController = {
                 return res.status(400).json({ error: 'El usuario ya existe' });
             }
 
-            // Hashear password
             const hashedPassword = await bcrypt.hash(password, 10);
 
             const user = await User.create({
@@ -29,15 +28,9 @@ const authController = {
                 passwordHash: hashedPassword
             });
 
-            const token = jwt.sign(
-                { id: user.id, name: user.name, email: user.email },
-                process.env.JWT_SECRET,
-                { expiresIn: '7d' }
-            );
-
             res.status(201).json({
                 message: 'Usuario registrado exitosamente',
-                user: { id: user.id, name: user.name, email: user.email }
+                user: { name: user.name, email: user.email }
             });
 
         } catch (error) {
@@ -54,20 +47,16 @@ const authController = {
                 return res.status(400).json({ error: 'Email y password son requeridos' });
             }
 
-            const user = await User.findOne({
-                where: { email },
-                attributes: ['id', 'name', 'email', 'passwordHash']
-            });
-
+            const user = await User.findOne({ where: { email } });
             if (!user) return res.status(401).json({ error: 'Credenciales inválidas' });
 
             const isValidPassword = await user.verifyPassword(password);
             if (!isValidPassword) return res.status(401).json({ error: 'Credenciales inválidas' });
 
             const accessToken = jwt.sign(
-                { id: user.id, name: user.name, email: user.email },
+                { id: user.id },
                 process.env.JWT_SECRET,
-                { expiresIn: '1h' }
+                { expiresIn: '30m' }
             );
 
             const refreshToken = jwt.sign(
@@ -76,16 +65,22 @@ const authController = {
                 { expiresIn: '7d' }
             );
 
-            res.cookie("refreshToken", refreshToken, {
+            res.cookie("access_token", accessToken, {
                 httpOnly: true,
-                secure: true,
-                sameSite: "none",
+                secure: process.env.NODE_ENV === "production",
+                sameSite: "strict",
+                maxAge: 30 * 60 * 1000
+            });
+
+            res.cookie("refresh_token", refreshToken, {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === "production",
+                sameSite: "strict",
                 maxAge: 7 * 24 * 60 * 60 * 1000
             });
 
             res.json({
-                message: 'Login exitoso',
-                accessToken,
+                message: "Login exitoso",
                 user: {
                     id: user.id,
                     name: user.name,
@@ -94,55 +89,42 @@ const authController = {
             });
 
         } catch (error) {
-            console.error('Error en login:', error);
-            res.status(500).json({ error: 'Error en el servidor: ' + error.message });
+            res.status(500).json({ error: "Error interno" });
         }
     },
 
     logout: (req, res) => {
-        res.clearCookie("token", {
-            httpOnly: true,
-            secure: true,
-            sameSite: "none"
-        });
-
+        res.clearCookie("access_token");
+        res.clearCookie("refresh_token");
         res.json({ message: "Sesión cerrada" });
     },
 
     refresh: async (req, res) => {
-        const tokenFromCookie = req.cookies.refreshToken;
-        if (!tokenFromCookie) {
-            return res.status(401).json({ error: "No hay refresh token" });
+        const token = req.cookies.refresh_token;
+        if (!token) {
+            return res.status(401).json({ error: "No autenticado" });
         }
 
         try {
-            const data = jwt.verify(tokenFromCookie, process.env.JWT_REFRESH_SECRET);
+            const payload = jwt.verify(token, process.env.JWT_REFRESH_SECRET);
 
             const newAccessToken = jwt.sign(
-                { id: data.id },
+                { id: payload.id },
                 process.env.JWT_SECRET,
-                { expiresIn: "1h" }
+                { expiresIn: "30m" }
             );
 
-            res.json({ accessToken: newAccessToken });
-
-        } catch (err) {
-            console.error("Error refrescando token:", err.message);
-            return res.status(401).json({ error: "Refresh token inválido o expirado" });
-        }
-    },
-
-    getProfile: async (req, res) => {
-        try {
-            res.json({
-                user: {
-                    id: req.user.id,
-                    name: req.user.name,
-                    email: req.user.email
-                }
+            res.cookie("access_token", newAccessToken, {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === "production",
+                sameSite: "strict",
+                maxAge: 30 * 60 * 1000
             });
-        } catch (error) {
-            res.status(500).json({ error: 'Error en el servidor: ' + error.message });
+
+            res.json({ message: "Token refrescado" });
+
+        } catch {
+            return res.status(401).json({ error: "Refresh token inválido" });
         }
     }
 };
