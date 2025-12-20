@@ -288,7 +288,7 @@ const taskController = {
 
     getUpcomingTasks: async (req, res) => {
         try {
-            const { range = 60 } = req.query; // minutos por defecto
+            const { range = 60 } = req.query;
             const now = new Date();
             const rangeEnd = new Date(now.getTime() + range * 60000);
 

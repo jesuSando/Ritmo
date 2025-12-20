@@ -3,11 +3,13 @@ const { User } = require("../models");
 
 const authenticate = async (req, res, next) => {
     try {
-        const token = req.cookies?.token;
+        const authHeader = req.headers.authorization;
 
-        if (!token) {
+        if (!authHeader || !authHeader.startsWith("Bearer ")) {
             return res.status(401).json({ error: "No autenticado. Falta token." });
         }
+
+        const token = authHeader.split(" ")[1];
 
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
@@ -18,9 +20,8 @@ const authenticate = async (req, res, next) => {
 
         req.user = user;
         next();
-
     } catch (error) {
-        console.error("Error en authenticate middleware:", error);
+        console.error("Auth error:", error);
         return res.status(401).json({ error: "Token inválido o expirado." });
     }
 };

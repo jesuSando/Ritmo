@@ -6,11 +6,8 @@
   "scripts": {
     "dev": "nodemon server.js",
     "start": "node server.js",
-    "create-user": "node src/scripts/createUser.js",
-    "db:sync": "node src/scripts/syncDatabase.js",
-    "db:sync:force": "node src/scripts/syncDatabase.js --force",
-    "db:sync:alter": "node src/scripts/syncDatabase.js --alter",
-    "db:sync:test": "node src/scripts/syncDatabase.js --create-test-data"
+    "db:init": "node src/scripts/init-db.js",
+    "db:sync": "node src/scripts/sync-db.js"
   },
   "dependencies": {
     "bcryptjs": "3.0.3",
@@ -20,7 +17,7 @@
     "express": "5.1.0",
     "jsonwebtoken": "9.0.2",
     "mysql2": "3.15.3",
-    "nodemon": "3.1.10",
+    "nodemon": "^3.1.10",
     "sequelize": "6.37.7"
   }
 }
